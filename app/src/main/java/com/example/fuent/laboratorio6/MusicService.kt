@@ -1,16 +1,22 @@
 package com.example.fuent.laboratorio6
 
 import android.app.Service
-import java.util.ArrayList;
-import android.content.ContentUris;
+import java.util.ArrayList
+import android.content.ContentUris
 import android.content.Intent
-import android.media.AudioManager;
-import android.media.MediaPlayer;
-import android.net.Uri;
-import android.os.Binder;
+import android.media.AudioManager
+import android.media.MediaPlayer
+import android.net.Uri
+import android.os.Binder
 import android.os.IBinder
-import android.os.PowerManager;
-import android.util.Log;
+import android.os.PowerManager
+import android.util.Log
+import java.util.Random
+import android.app.Notification
+import android.app.PendingIntent
+import android.os.Build
+import android.support.annotation.RequiresApi
+
 
 /**
  * Created by Marco Fuentes on 14/02/2019.
@@ -18,14 +24,22 @@ import android.util.Log;
 
 class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener {
 
+    private var  songTitle : String = ""
+    private var NOTIFY_ID = 1;
     private var player = MediaPlayer()
     private var songs : ArrayList <Song> = arrayListOf()
     private var songPosn: Int = 0
     private var musicBind : IBinder = MusicBinder()
+    private var shuffle = false
+    private var rand : Random = Random()
+
+    fun setShuffle(){
+        if (shuffle) shuffle = false
+        else shuffle = true
+    }
 
     fun setList(theSongs: ArrayList<Song>){
         songs = theSongs
-        println("El tamaño es de ${songs.size}")
     }
 
     inner class MusicBinder : Binder() {
@@ -50,9 +64,21 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
     }
 
 
+    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     override fun onPrepared(mp: MediaPlayer?) {
         //Comenzar el playback
         mp!!.start()
+
+        var notIntent = Intent(this, MainActivity::class.java)
+        notIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        var pendInt : PendingIntent = PendingIntent.getActivity(this,0, notIntent, PendingIntent.FLAG_UPDATE_CURRENT)
+
+        var builder : Notification.Builder = Notification.Builder(this)
+
+        builder.setContentIntent (pendInt).setSmallIcon(R.drawable.play).setTicker(songTitle).setOngoing(true).setContentText(songTitle)
+        var not : Notification = builder.build()
+        startForeground(NOTIFY_ID, not)
+
     }
 
     override fun onError(mp: MediaPlayer?, what: Int, extra: Int): Boolean {
@@ -62,6 +88,10 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
 
     override fun onCompletion(mp: MediaPlayer?) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun onDestroy(){
+        stopForeground(true)
     }
 
     override fun onBind(intent: Intent?): IBinder {
@@ -83,6 +113,7 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
         player.reset()
         //conseguir la cancion
         val playSong = songs[songPosn]
+        songTitle = playSong.getTitle()
         //conseguir el identificador
         val currSong = playSong.getID()
         //Fijar el URI
@@ -96,6 +127,53 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
         }
         player.prepareAsync()
 
-    }git
+    }
+
+    fun getPosn(): Int {
+        return player.currentPosition
+    }
+
+    fun getDur(): Int {
+        return player.duration
+    }
+
+    fun isPng(): Boolean {
+        return player.isPlaying
+    }
+
+    fun pausePlayer() {
+        player.pause()
+    }
+
+    fun seek(posn: Int) {
+        player.seekTo(posn)
+    }
+
+    fun go() {
+        player.start()
+    }
+
+    fun playPrev(){
+        songPosn--;
+        if(songPosn != 0)
+        songPosn = songs.size-1
+        playSong();
+    }
+
+    fun playNext(){
+        if (shuffle){
+            var newSong : Int = songPosn
+            while (newSong == songPosn){
+                newSong=rand.nextInt(songs.size)
+            }
+            songPosn = newSong
+        }else {
+            songPosn++
+            if (songPosn == songs.size) {
+                songPosn = 0
+            }
+        }
+        playSong()
+    }
 
 }

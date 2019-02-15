@@ -18,20 +18,86 @@ import android.content.ServiceConnection;
 import android.view.MenuItem;
 import android.view.View;
 import com.example.fuent.laboratorio6.MusicService
+import android.app.Activity
+import android.support.v4.app.ActivityCompat
+import android.widget.MediaController.MediaPlayerControl;
 
 
 
 
 
 
-class MainActivity : AppCompatActivity() {
+
+class MainActivity : AppCompatActivity(), MediaPlayerControl {
+    override fun isPlaying(): Boolean {
+        if(musicSrv!=null){
+        return musicSrv.isPng();}
+        else{return false;}
+    }
+
+    override fun canSeekForward(): Boolean {
+        return true
+    }
+
+    override fun getDuration(): Int {
+        if(musicSrv!=null) {
+            return musicSrv.getDur();
+        }else {return 0;}
+    }
+
+    override fun pause() {
+        musicSrv.pausePlayer()
+    }
+
+    override fun getBufferPercentage(): Int {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun seekTo(pos: Int) {
+        musicSrv.seek(pos)
+    }
+
+    override fun getCurrentPosition(): Int {
+        if(musicSrv!=null)
+        return musicSrv.getPosn();
+        else {return 0;}
+    }
+
+    override fun canSeekBackward(): Boolean {
+        return true
+    }
+
+    override fun start() {
+        musicSrv.go()
+    }
+
+    override fun getAudioSessionId(): Int {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override fun canPause(): Boolean {
+        return true
+    }
+
     var songList: ArrayList<Song> = ArrayList()
 
     var musicSrv = MusicService()
     var playIntent = Intent()
     var musicBound : Boolean = false
+    private var controller = MusicController(this)
+
+
+    private fun setController(){
+        var controller0 = MusicController(this)
+        controller0.setPrevNextListeners({ playNext() }) { playPrev() }
+        controller0.setMediaPlayer(this);
+        controller0.setAnchorView(findViewById(R.id.song_list));
+        controller0.setEnabled(true);
+    }
 
   override fun onCreate(savedInstanceState: Bundle?) {
+
+
 
       super.onCreate(savedInstanceState)
       setContentView(R.layout.activity_main)
@@ -50,6 +116,9 @@ class MainActivity : AppCompatActivity() {
       songView!!.setAdapter(songAdt)
       //setController()
       musicSrv.setList(songList)
+
+      setController()
+
   }
 
     private val musicConnection = object: ServiceConnection{
@@ -109,6 +178,9 @@ class MainActivity : AppCompatActivity() {
                 musicSrv = null!!
                 System.exit(0)
             }
+            R.id.action_shuffle ->{
+                musicSrv.setShuffle()
+            }
         }//shuffle
         return super.onOptionsItemSelected(item)
     }
@@ -119,4 +191,21 @@ class MainActivity : AppCompatActivity() {
         super.onDestroy()
     }
 
+    fun checkPermissionForReadExtertalStorage(): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val result = this.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+            return result == PackageManager.PERMISSION_GRANTED
+        }
+        return false
+    }
+
+    private fun playNext() {
+        musicSrv.playNext()
+        controller.show(0)
+    }
+
+    private fun playPrev() {
+        musicSrv.playPrev()
+        controller.show(0)
+    }
 }
