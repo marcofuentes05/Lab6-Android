@@ -15,4 +15,11 @@ class Song {
         artist = ar
     }
 
+    fun getTitle(): String{
+        return this.title
+    }
+    fun getArtist():String{
+        return artist
+    }
+
 }
