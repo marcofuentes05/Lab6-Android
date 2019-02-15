@@ -21,5 +21,8 @@ class Song {
     fun getArtist():String{
         return artist
     }
+    fun getID(): Long{
+        return id
+    }
 
 }

@@ -24,7 +24,7 @@ class SongAdapter : BaseAdapter{
 
     override fun getView(position: Int, convertView: View?, parent: ViewGroup?): View {
         //map to song layout
-        val songLay = songInf.inflate(R.layout.song, parent, false) as LinearLayout
+        val songLay = (songInf.inflate(R.layout.song, parent, false)) as LinearLayout
         //get title and artist views
         val songView = songLay.findViewById<View>(R.id.song_title) as TextView
         val artistView = songLay.findViewById<View>(R.id.song_artist) as TextView
@@ -43,7 +43,7 @@ class SongAdapter : BaseAdapter{
     }
 
     override fun getItemId(position: Int): Long {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return 0
     }
 
     override fun getCount(): Int {
