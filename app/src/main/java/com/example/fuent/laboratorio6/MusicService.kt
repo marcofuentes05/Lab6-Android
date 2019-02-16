@@ -24,9 +24,9 @@ import android.support.annotation.RequiresApi
 
 class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnErrorListener, MediaPlayer.OnCompletionListener {
 
-    private var  songTitle : String = ""
-    private var NOTIFY_ID = 1;
-    private var player = MediaPlayer()
+    private var songTitle : String = ""
+    private var NOTIFY_ID = 1
+    private var player : MediaPlayer? = null
     private var songs : ArrayList <Song> = arrayListOf()
     private var songPosn: Int = 0
     private var musicBind : IBinder = MusicBinder()
@@ -55,12 +55,12 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
     }
 
     fun initMusicPlayer(){
-        player.setWakeMode( getApplicationContext(),
+        player!!.setWakeMode( getApplicationContext(),
                 PowerManager.PARTIAL_WAKE_LOCK)
-        player.setAudioStreamType(AudioManager.STREAM_MUSIC)
-        player.setOnPreparedListener(this)
-        player.setOnCompletionListener(this)
-        player.setOnErrorListener(this)
+        player!!.setAudioStreamType(AudioManager.STREAM_MUSIC)
+        player!!.setOnPreparedListener(this)
+        player!!.setOnCompletionListener(this)
+        player!!.setOnErrorListener(this)
     }
 
 
@@ -81,13 +81,16 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
 
     }
 
-    override fun onError(mp: MediaPlayer?, what: Int, extra: Int): Boolean {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun onError(mp: MediaPlayer, what: Int, extra: Int): Boolean {
+        mp.reset()
         return false
     }
 
-    override fun onCompletion(mp: MediaPlayer?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun onCompletion(mp: MediaPlayer) {
+        if(player?.currentPosition == 0){
+            mp.reset()
+            playNext()
+        }
     }
 
     override fun onDestroy(){
@@ -99,8 +102,8 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
     }
 
     override fun onUnbind(intent: Intent): Boolean {
-        player.stop()
-        player.release()
+        player!!.stop()
+        player!!.release()
         return false
     }
 
@@ -110,7 +113,7 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
 
 
     fun playSong(){
-        player.reset()
+        player?.reset()
         //conseguir la cancion
         val playSong = songs[songPosn]
         songTitle = playSong.getTitle()
@@ -121,36 +124,36 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
                 android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                 currSong)
         try {
-            player.setDataSource(applicationContext, trackUri)
+            player!!.setDataSource(applicationContext, trackUri)
         } catch (e: Exception) {
             Log.e("MUSIC SERVICE", "Error setting data source", e)
         }
-        player.prepareAsync()
+        player?.prepareAsync()
 
     }
 
     fun getPosn(): Int {
-        return player.currentPosition
+        return player!!.currentPosition
     }
 
     fun getDur(): Int {
-        return player.duration
+        return player!!.duration
     }
 
     fun isPng(): Boolean {
-        return player.isPlaying
+        return player!!.isPlaying
     }
 
     fun pausePlayer() {
-        player.pause()
+        player!!.pause()
     }
 
     fun seek(posn: Int) {
-        player.seekTo(posn)
+        player!!.seekTo(posn)
     }
 
     fun go() {
-        player.start()
+        player!!.start()
     }
 
     fun playPrev(){
@@ -175,5 +178,7 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
         }
         playSong()
     }
+
+
 
 }

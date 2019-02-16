@@ -4,31 +4,68 @@ import android.Manifest
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.ListView
-import android.content.ContentResolver
 import android.content.pm.PackageManager
 import android.os.Build
 import android.support.annotation.RequiresApi
-import android.widget.ArrayAdapter
 import java.util.*
-import android.os.IBinder;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.content.ServiceConnection;
-import android.view.MenuItem;
-import android.view.View;
-import com.example.fuent.laboratorio6.MusicService
-import android.app.Activity
-import android.support.v4.app.ActivityCompat
-import android.widget.MediaController.MediaPlayerControl;
-
-
-
-
-
-
+import android.os.IBinder
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.ServiceConnection
+import android.view.MenuItem
+import android.view.View
+import android.widget.MediaController.MediaPlayerControl
 
 class MainActivity : AppCompatActivity(), MediaPlayerControl {
+
+    var songList: ArrayList<Song> = ArrayList()
+    var musicSrv = MusicService()
+    var playIntent = Intent()
+    var musicBound : Boolean = false
+    private var paused : Boolean =false
+    private var playbackPaused : Boolean = false
+    var controller : MusicController? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        var songView: ListView = findViewById(R.id.lista)
+
+        getSongList()
+
+        Collections.sort(songList, object : Comparator<Song> {
+            override fun compare(a: Song, b: Song): Int {
+                return a.getTitle().compareTo(b.getTitle())
+            }
+        })
+        val songAdt = SongAdapter(this, songList)
+        songView.adapter = songAdt
+        musicSrv.setList(songList)
+        setController()
+    }
+
+
+
+    override fun onPause() {
+        super.onPause()
+        paused = true
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (paused) {
+            setController()
+            paused = false
+        }
+    }
+
+    override fun onStop() {
+        controller?.hide()
+        super.onStop()
+    }
+
     override fun isPlaying(): Boolean {
         if(musicSrv!=null){
         return musicSrv.isPng();}
@@ -43,10 +80,6 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
         if(musicSrv!=null) {
             return musicSrv.getDur();
         }else {return 0;}
-    }
-
-    override fun pause() {
-        musicSrv.pausePlayer()
     }
 
     override fun getBufferPercentage(): Int {
@@ -79,47 +112,15 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
         return true
     }
 
-    var songList: ArrayList<Song> = ArrayList()
-
-    var musicSrv = MusicService()
-    var playIntent = Intent()
-    var musicBound : Boolean = false
-    private var controller = MusicController(this)
-
-
     private fun setController(){
-        var controller0 = MusicController(this)
-        controller0.setPrevNextListeners({ playNext() }) { playPrev() }
-        controller0.setMediaPlayer(this);
-        controller0.setAnchorView(findViewById(R.id.song_list));
-        controller0.setEnabled(true);
+        var controller = MusicController(this)
+        controller.setPrevNextListeners({ playNext() }) { playPrev() }
+        controller.setMediaPlayer(this)
+        controller.setAnchorView(findViewById(R.id.lista))
+        controller.setEnabled(true)
     }
 
-  override fun onCreate(savedInstanceState: Bundle?) {
 
-
-
-      super.onCreate(savedInstanceState)
-      setContentView(R.layout.activity_main)
-
-      var songView: ListView = findViewById(R.id.lista)
-
-      getSongList()
-
-      Collections.sort(songList, object : Comparator<Song> {
-          override fun compare(a: Song, b: Song): Int {
-              return a.getTitle().compareTo(b.getTitle())
-          }
-      })
-
-      val songAdt = SongAdapter(this, songList)
-      songView!!.setAdapter(songAdt)
-      //setController()
-      musicSrv.setList(songList)
-
-      setController()
-
-  }
 
     private val musicConnection = object: ServiceConnection{
         override fun onServiceConnected (name: ComponentName, service: IBinder){
@@ -165,8 +166,13 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
     }
 
     fun songPicked (view : View ){
-        musicSrv.setSong(Integer.parseInt(view.getTag().toString()))
-        musicSrv.playSong()
+        musicSrv!!.setSong(Integer.parseInt(view.getTag().toString()))
+        musicSrv!!.playSong()
+        if(playbackPaused){
+            setController()
+            playbackPaused=false
+        }
+        controller!!.show(0)
     }
 
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
@@ -191,6 +197,7 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
         super.onDestroy()
     }
 
+    @RequiresApi(Build.VERSION_CODES.M)
     fun checkPermissionForReadExtertalStorage(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             val result = this.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -201,11 +208,24 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
 
     private fun playNext() {
         musicSrv.playNext()
-        controller.show(0)
+        if (playbackPaused) {
+            setController()
+            playbackPaused = false
+        }
+        controller?.show(0)
     }
 
     private fun playPrev() {
         musicSrv.playPrev()
-        controller.show(0)
+        if (playbackPaused) {
+            setController()
+            playbackPaused = false
+        }
+        controller?.show(0)
+    }
+
+    override fun pause() {
+        playbackPaused = true
+        musicSrv.pausePlayer()
     }
 }
