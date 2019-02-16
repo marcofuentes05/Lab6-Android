@@ -1,6 +1,7 @@
 package com.example.fuent.laboratorio6
 
 import android.Manifest
+import android.app.Activity
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.ListView
@@ -13,26 +14,25 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.widget.MediaController.MediaPlayerControl
 
-class MainActivity : AppCompatActivity(), MediaPlayerControl {
+class MainActivity : Activity() , MediaPlayerControl {
 
     var songList: ArrayList<Song> = ArrayList()
-    var musicSrv = MusicService()
-    var playIntent = Intent()
+    var musicSrv : MusicService? = null
+    var playIntent : Intent? = null
     var musicBound : Boolean = false
-    private var paused : Boolean =false
-    private var playbackPaused : Boolean = false
+    var paused : Boolean =false
+    var playbackPaused : Boolean = false
     var controller : MusicController? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
         var songView: ListView = findViewById(R.id.lista)
-
         getSongList()
 
         Collections.sort(songList, object : Comparator<Song> {
@@ -42,11 +42,37 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
         })
         val songAdt = SongAdapter(this, songList)
         songView.adapter = songAdt
-        musicSrv.setList(songList)
+        musicSrv?.setList(songList)
         setController()
     }
 
+    private val musicConnection = object: ServiceConnection{
+        override fun onServiceConnected (name: ComponentName, service: IBinder){
+            val binder = service as MusicService.MusicBinder
+            // Conseguir servicio
+            musicSrv = binder.service
+            // Pasar la lista
+            musicSrv!!.setList(songList)
+            musicBound = true
+        }
+        override fun onServiceDisconnected (name : ComponentName) {
+            musicBound = false
+        }
+    }
 
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main, menu)
+        return true
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (playIntent == null) {
+            playIntent = Intent(this, MusicService::class.java)
+            bindService(playIntent, musicConnection, Context.BIND_AUTO_CREATE)
+            startService(playIntent)
+        }
+    }
 
     override fun onPause() {
         super.onPause()
@@ -67,8 +93,8 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
     }
 
     override fun isPlaying(): Boolean {
-        if(musicSrv!=null){
-        return musicSrv.isPng();}
+        if(musicSrv!=null && musicBound){
+        return musicSrv!!.isPng();}
         else{return false;}
     }
 
@@ -77,8 +103,8 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
     }
 
     override fun getDuration(): Int {
-        if(musicSrv!=null) {
-            return musicSrv.getDur();
+        if(musicSrv!=null && musicBound && musicSrv!!.isPng()) {
+            return musicSrv!!.getDur();
         }else {return 0;}
     }
 
@@ -87,12 +113,12 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
     }
 
     override fun seekTo(pos: Int) {
-        musicSrv.seek(pos)
+        musicSrv!!.seek(pos)
     }
 
     override fun getCurrentPosition(): Int {
-        if(musicSrv!=null)
-        return musicSrv.getPosn();
+        if(musicSrv!=null && musicBound &&  musicSrv!!.isPng())
+        return musicSrv!!.getPosn();
         else {return 0;}
     }
 
@@ -101,7 +127,7 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
     }
 
     override fun start() {
-        musicSrv.go()
+        musicSrv!!.go()
     }
 
     override fun getAudioSessionId(): Int {
@@ -117,33 +143,10 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
         controller.setPrevNextListeners({ playNext() }) { playPrev() }
         controller.setMediaPlayer(this)
         controller.setAnchorView(findViewById(R.id.lista))
-        controller.setEnabled(true)
+        controller.isEnabled = true
     }
 
 
-
-    private val musicConnection = object: ServiceConnection{
-        override fun onServiceConnected (name: ComponentName, service: IBinder){
-            val binder = service as MusicService.MusicBinder
-            // Conseguir servicio
-            musicSrv = binder.service
-            // Pasar la lista
-            musicSrv.setList(songList)
-            musicBound = true
-        }
-        override fun onServiceDisconnected (name : ComponentName) {
-            musicBound = false
-        }
-    }
-
-    override fun onStart() {
-        super.onStart()
-        if (playIntent == null) {
-            playIntent = Intent(this, MusicService::class.java)
-            bindService(playIntent, musicConnection, Context.BIND_AUTO_CREATE)
-            startService(playIntent)
-        }
-    }
 
     fun getSongList() {
         val musicResolver = contentResolver
@@ -172,7 +175,7 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
             setController()
             playbackPaused=false
         }
-        controller!!.show(0)
+        controller?.show(0)
     }
 
     override fun onOptionsItemSelected(item: MenuItem?): Boolean {
@@ -185,7 +188,7 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
                 System.exit(0)
             }
             R.id.action_shuffle ->{
-                musicSrv.setShuffle()
+                musicSrv!!.setShuffle()
             }
         }//shuffle
         return super.onOptionsItemSelected(item)
@@ -193,21 +196,12 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
 
     override fun onDestroy(){
         stopService(playIntent)
-        musicSrv = null!!
+        musicSrv = null
         super.onDestroy()
     }
 
-    @RequiresApi(Build.VERSION_CODES.M)
-    fun checkPermissionForReadExtertalStorage(): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val result = this.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
-            return result == PackageManager.PERMISSION_GRANTED
-        }
-        return false
-    }
-
     private fun playNext() {
-        musicSrv.playNext()
+        musicSrv!!.playNext()
         if (playbackPaused) {
             setController()
             playbackPaused = false
@@ -216,7 +210,7 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
     }
 
     private fun playPrev() {
-        musicSrv.playPrev()
+        musicSrv!!.playPrev()
         if (playbackPaused) {
             setController()
             playbackPaused = false
@@ -226,6 +220,6 @@ class MainActivity : AppCompatActivity(), MediaPlayerControl {
 
     override fun pause() {
         playbackPaused = true
-        musicSrv.pausePlayer()
+        musicSrv!!.pausePlayer()
     }
 }

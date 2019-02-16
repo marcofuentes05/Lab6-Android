@@ -26,7 +26,7 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
 
     private var songTitle : String = ""
     private var NOTIFY_ID = 1
-    private var player : MediaPlayer? = null
+    private var player : MediaPlayer = MediaPlayer()
     private var songs : ArrayList <Song> = arrayListOf()
     private var songPosn: Int = 0
     private var musicBind : IBinder = MusicBinder()
@@ -55,14 +55,13 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
     }
 
     fun initMusicPlayer(){
-        player!!.setWakeMode( getApplicationContext(),
+        player.setWakeMode( getApplicationContext(),
                 PowerManager.PARTIAL_WAKE_LOCK)
-        player!!.setAudioStreamType(AudioManager.STREAM_MUSIC)
-        player!!.setOnPreparedListener(this)
-        player!!.setOnCompletionListener(this)
-        player!!.setOnErrorListener(this)
+        player.setAudioStreamType(AudioManager.STREAM_MUSIC)
+        player.setOnPreparedListener(this)
+        player.setOnCompletionListener(this)
+        player.setOnErrorListener(this)
     }
-
 
     @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     override fun onPrepared(mp: MediaPlayer?) {
@@ -75,7 +74,12 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
 
         var builder : Notification.Builder = Notification.Builder(this)
 
-        builder.setContentIntent (pendInt).setSmallIcon(R.drawable.play).setTicker(songTitle).setOngoing(true).setContentText(songTitle)
+        builder.setContentIntent (pendInt)
+                .setSmallIcon(R.drawable.play)
+                .setTicker(songTitle)
+                .setOngoing(true)
+                .setContentTitle("Playing")
+                .setContentText(songTitle)
         var not : Notification = builder.build()
         startForeground(NOTIFY_ID, not)
 
@@ -87,7 +91,7 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
     }
 
     override fun onCompletion(mp: MediaPlayer) {
-        if(player?.currentPosition == 0){
+        if(player?.currentPosition > 0){
             mp.reset()
             playNext()
         }
@@ -124,11 +128,11 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
                 android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                 currSong)
         try {
-            player!!.setDataSource(applicationContext, trackUri)
+            player.setDataSource(applicationContext, trackUri)
         } catch (e: Exception) {
             Log.e("MUSIC SERVICE", "Error setting data source", e)
         }
-        player?.prepareAsync()
+        player.prepareAsync()
 
     }
 
@@ -157,10 +161,11 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
     }
 
     fun playPrev(){
-        songPosn--;
-        if(songPosn != 0)
-        songPosn = songs.size-1
-        playSong();
+        songPosn--
+        if(songPosn < 0){
+            songPosn = songs.size-1
+        }
+        playSong()
     }
 
     fun playNext(){
@@ -172,7 +177,7 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
             songPosn = newSong
         }else {
             songPosn++
-            if (songPosn == songs.size) {
+            if (songPosn >= songs.size) {
                 songPosn = 0
             }
         }
