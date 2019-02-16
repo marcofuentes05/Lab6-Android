@@ -146,8 +146,6 @@ class MainActivity : Activity() , MediaPlayerControl {
         controller.isEnabled = true
     }
 
-
-
     fun getSongList() {
         val musicResolver = contentResolver
         val musicUri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI

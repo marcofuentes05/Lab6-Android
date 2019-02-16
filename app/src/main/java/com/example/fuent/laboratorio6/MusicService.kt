@@ -137,23 +137,23 @@ class MusicService : Service(), MediaPlayer.OnPreparedListener, MediaPlayer.OnEr
     }
 
     fun getPosn(): Int {
-        return player!!.currentPosition
+        return player.currentPosition
     }
 
     fun getDur(): Int {
-        return player!!.duration
+        return player.duration
     }
 
     fun isPng(): Boolean {
-        return player!!.isPlaying
+        return player.isPlaying
     }
 
     fun pausePlayer() {
-        player!!.pause()
+        player.pause()
     }
 
     fun seek(posn: Int) {
-        player!!.seekTo(posn)
+        player.seekTo(posn)
     }
 
     fun go() {
