@@ -12,6 +12,7 @@ import android.widget.TextView;
 /**
  * Created by Marco Fuentes on 14/02/2019.
  */
+
 class SongAdapter : BaseAdapter{
 
     private var songs : ArrayList<Song> = arrayListOf()

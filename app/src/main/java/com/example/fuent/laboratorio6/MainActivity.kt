@@ -176,17 +176,15 @@ class MainActivity : Activity() , MediaPlayerControl {
         controller?.show(0)
     }
 
-    override fun onOptionsItemSelected(item: MenuItem?): Boolean {
-        when (item!!.getItemId()) {
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
             R.id.action_shuffle -> {
+                musicSrv!!.setShuffle()
             }
             R.id.action_end -> {
                 stopService(playIntent)
-                musicSrv = null!!
+                musicSrv = null
                 System.exit(0)
-            }
-            R.id.action_shuffle ->{
-                musicSrv!!.setShuffle()
             }
         }//shuffle
         return super.onOptionsItemSelected(item)
